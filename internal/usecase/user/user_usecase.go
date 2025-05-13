@@ -13,6 +13,7 @@ type UserRepository interface {
 	GetByUsername(username string) (*domain.User, error)
 	CreateToken(token *domain.Token) error
 	DeleteTokenByUserID(userID int64) error
+	CreateUser(user *domain.User) error
 }
 
 type UserUseCase struct {
@@ -67,6 +68,28 @@ func (uc *UserUseCase) Login(username, password string) (*domain.Token, *domain.
 	}
 
 	return token, user, nil
+}
+
+func (uc *UserUseCase) CreateUser(user *domain.User) (*domain.User, error) {
+	// Check if user already exists
+	if _, err := uc.userRepo.GetByUsername(user.Username); err == nil {
+		return nil, errors.New("user already exists")
+	}
+	// check if email already exists
+	if _, err := uc.userRepo.GetByUsername(user.Email); err == nil {
+		return nil, errors.New("email already exists")
+	}
+	// Hash password
+	hash, err := bcrypt.GenerateFromPassword([]byte(user.PasswordHash), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, err
+	}
+	user.PasswordHash = string(hash)
+	// Create user
+	if err := uc.userRepo.CreateUser(user); err != nil {
+		return nil, err
+	}
+	return user, nil
 }
 
 func (uc *UserUseCase) generateAccessToken(user *domain.User) (string, error) {

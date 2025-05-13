@@ -22,6 +22,7 @@ func SetupRouter(authHandler *handler.AuthHandler, jwtKey []byte) *gin.Engine {
 		admin.Use(middleware.RoleMiddleware("1")) // Admin role
 		{
 			// Add admin routes here
+			admin.POST("/users", authHandler.CreateUser) // Add this line with capital C
 		}
 
 		// User routes
