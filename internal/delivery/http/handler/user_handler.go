@@ -28,11 +28,23 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	token, err := h.userUseCase.Login(req.Username, req.Password)
+	token, user, err := h.userUseCase.Login(req.Username, req.Password)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, token)
+	c.JSON(http.StatusOK, gin.H{
+		"token": gin.H{
+			"access_token":  token.AccessToken,
+			"refresh_token": token.RefreshToken,
+			"expires_at":    token.Expiry,
+		},
+		"user": gin.H{
+			"user_id":  user.UserID,
+			"role_id":  user.RoleID,
+			"username": user.Username,
+			"email":    user.Email,
+		},
+	})
 }

@@ -1,37 +1,36 @@
 package router
 
 import (
-	"net/http"
 	"splunk_soar_clone/internal/delivery/http/handler"
+	"splunk_soar_clone/internal/middleware"
 
 	"github.com/gin-gonic/gin"
 )
 
-func SetupRouter(authHandler *handler.AuthHandler) *gin.Engine {
+func SetupRouter(authHandler *handler.AuthHandler, jwtKey []byte) *gin.Engine {
 	r := gin.Default()
 
 	// Public routes
 	r.POST("/login", authHandler.Login)
 
 	// Protected routes
-	auth := r.Group("/api")
-	auth.Use(authMiddleware())
+	api := r.Group("/api")
+	api.Use(middleware.AuthMiddleware(jwtKey))
 	{
-		// Add protected routes here
+		// Admin only routes
+		admin := api.Group("/admin")
+		admin.Use(middleware.RoleMiddleware("1")) // Admin role
+		{
+			// Add admin routes here
+		}
+
+		// User routes
+		users := api.Group("/users")
+		users.Use(middleware.RoleMiddleware("1", "2")) // Admin and regular users
+		{
+			// Add user routes here
+		}
 	}
 
 	return r
-}
-
-func authMiddleware() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		token := c.GetHeader("Authorization")
-		if token == "" {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
-			return
-		}
-		// Validate JWT token here
-		// Set user claims in context
-		c.Next()
-	}
 }

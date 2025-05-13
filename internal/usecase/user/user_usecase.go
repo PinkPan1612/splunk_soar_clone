@@ -27,31 +27,31 @@ func NewUserUseCase(userRepo UserRepository, jwtKey []byte) *UserUseCase {
 	}
 }
 
-func (uc *UserUseCase) Login(username, password string) (*domain.Token, error) {
+func (uc *UserUseCase) Login(username, password string) (*domain.Token, *domain.User, error) {
 	user, err := uc.userRepo.GetByUsername(username)
 	if err != nil {
-		return nil, errors.New("invalid credentials")
+		return nil, nil, errors.New("invalid credentials")
 	}
 
 	// Check password
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password)); err != nil {
-		return nil, errors.New("invalid credentials")
+		return nil, nil, errors.New("invalid credentials")
 	}
 
 	// Generate tokens
 	accessToken, err := uc.generateAccessToken(user)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	refreshToken, err := uc.generateRefreshToken(user)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// Delete existing tokens
 	if err := uc.userRepo.DeleteTokenByUserID(user.UserID); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// Create new token record
@@ -63,10 +63,10 @@ func (uc *UserUseCase) Login(username, password string) (*domain.Token, error) {
 	}
 
 	if err := uc.userRepo.CreateToken(token); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	return token, nil
+	return token, user, nil
 }
 
 func (uc *UserUseCase) generateAccessToken(user *domain.User) (string, error) {
